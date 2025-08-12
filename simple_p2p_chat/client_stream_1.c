@@ -1,90 +1,86 @@
 #include <stdio.h>
 #include <netdb.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #include <stdbool.h>
+#include <string.h>
 #include <stdlib.h>
 
-#define TO_PORT 4020
-#define MY_PORT 4021
 #define BACKLOG 10
+#define TO_PORT "3493"
+#define MY_PORT "3494"
 
 int main(){
-    struct addrinfo hints, *servinfo, *p;
-    struct sockaddr_in their_address;
-    char* msg;
-    int rcv, sock_fd, new_fd, pid;
-   
-    
-    if( (pid = fork()) == 0){
+    struct sockaddr_storage their_addr;
+    socklen_t addr_size;
+    struct addrinfo hints, *res;
+    int sockfd, newfd;
+    char *msg;
+    pid_t p = fork();
+
+    if(p == 0){
+        // listening to client
+        memset(&hints, 0, sizeof hints);
         hints.ai_family = AF_INET;
         hints.ai_socktype = SOCK_STREAM;
         hints.ai_flags = AI_PASSIVE;
 
-        if(getaddressinfo(NULL, MY_PORT, &hints, &servinfo) != 0){
-            printf("failed to get address info\n");
+        getaddrinfo(NULL, TO_PORT, &hints, &res);
+
+        if( (sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
+            printf("Parent/Send: Unable to create socket\n");
+        }
+        if( (connect(sockfd, res->ai_addr, res->ai_addrlen)) == -1 ){
+            printf("Parent/Sender: Failed to connect\n");
         }
 
-        for(p = servinfo; p != NULL; p = p->ai_next){
-            if( (sock_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1){
-                printf("failed to create socket")
-                continue;
-            }
+        msg = (char *)malloc(sizeof(char)*100);
 
-            if( setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, true, sizeof(int)) == -1){
-                perror("setsockopt\n");
-                exit(1);
-            }
-
-            if( bind(sock_fd, p->ai_addr, p->ai_addrlen) == -1){
-                close(sock_fd);
-                perror("server:bind\n");
-                continue;
-            }
-            break;
-
-            freeaddrinfo(servinfo);
-
-            if(p == NULL){
-                printf("failed to bind\n");
-                exit(1);
-            }
-
-            if( listen(sock_fd, BACKLOG) == -1 ){
-                printf("Failed to listen");
-            }
-
-            if( (new_fd = accept(sock_fd, ))
-            while(true){
-            }
+        while(true){
+            // *msg = "Hello World";
+            printf("Enter: ");
+            scanf("%s", msg);
+            int length = strlen(msg);
+            int sent = send(sockfd, msg, length, 0);
+            printf("Parent/Sender: Sent %i\n", sent);
+            sleep(1);
         }
-
-
+        free(msg);
     }
     else{
+        // send to client
+        memset(&hints, 0, sizeof hints);
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_flags = AI_PASSIVE;
 
+        getaddrinfo(NULL, MY_PORT, &hints, &res);
+
+        if( (sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1){
+            printf("Child/Receive: Unable to create socket\n");
+        };
+        
+        if( (bind(sockfd, res->ai_addr, res->ai_addrlen)) == -1 ){
+            printf("Child/Receive: Unable to bind to socket\n");
+        };
+
+        listen(sockfd, BACKLOG);
+
+        addr_size = sizeof their_addr;
+        newfd = accept(sockfd, (struct sockaddr *) &their_addr, &addr_size);
+        
+        msg = (char *)malloc(sizeof(char)*100);
+        int length = strlen(msg);
+
+        while(true){
+            int hello = recv(newfd, msg, 99, 0);
+            printf("Child/Receiver: Received %i\n", hello);
+            printf("%s\n", msg);
+            sleep(1);
+        }
+        free(msg);
     }
-
-
-    if( (rcv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0 ){
-        printf("Failed to get address info\n");
-    }
-
-    if( () )
-    
-    freeaddrinfo(servinfo);
-
-    if (p == NULL)  {
-        fprintf(stderr, "server: failed to bind\n");
-        exit(1);
-    }
-
-    if( listen(sock_fd, BACKLOG) != 0){
-        printf("Failed to listen to socket\n");
-    }
-
-    printf("server: waiting for connections...\n");
     
     return 0;
 }

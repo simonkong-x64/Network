@@ -7,8 +7,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define SEND_PORT "3491"
-#define RCV_PORT "3490"
 #define BACKLOG 10
 #define MYPORT "3493"
 
